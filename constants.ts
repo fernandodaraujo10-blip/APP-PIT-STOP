@@ -1,8 +1,12 @@
-import { Service, Appointment } from './types';
+import { Service, Appointment, ExtraService, Coupon, CashbackConfig } from './types';
 
 export const SHOP_PHONE = "5511978055321"; // Updated Owner Phone Number
 export const LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/gen-lang-client-0420780722.firebasestorage.app/o/Logos%20de%20App%2FApp%20Lava%20Rapido%2FPit%20Stop%20-%20Lava%20Car.png?alt=media&token=5a4d5919-917f-432e-89a5-2e2678508b8b";
 export const APP_BASE_URL = "https://pit-stop-lava-car-583261147772.us-west1.run.app";
+
+// Horário de Funcionamento
+export const OPENING_HOUR = 8;
+export const CLOSING_HOUR = 22;
 
 export const INITIAL_SERVICES: Service[] = [
   {
@@ -43,6 +47,47 @@ export const INITIAL_SERVICES: Service[] = [
   }
 ];
 
+export const DIRT_LEVEL_PRICES = {
+  'Normal': 0,
+  'Sujo': 10,
+  'Muito Sujo': 20
+};
+
+export const UPSELL_EXTRAS: ExtraService[] = [
+  { id: 'wax_simple', name: 'Cera Simples', price: 15, description: 'Brilho rápido' },
+  { id: 'wax_premium', name: 'Cera Premium (6 Meses)', price: 80, description: 'Proteção duradoura' },
+  { id: 'tire_shine', name: 'Pretinho Especial', price: 10, description: 'Longa duração' },
+  { id: 'sanitization', name: 'Oxi-Sanitização', price: 40, description: 'Remove odores' }
+];
+
+export const MOCK_COUPONS: Coupon[] = [
+  { 
+    id: 'c1', 
+    code: 'BEMVINDO', 
+    type: 'percent', 
+    value: 10, 
+    firstTimeOnly: true, 
+    expirationDate: '2030-12-31', 
+    active: true, 
+    usedBy: [] 
+  },
+  { 
+    id: 'c2', 
+    code: 'OFF5', 
+    type: 'fixed', 
+    value: 5, 
+    firstTimeOnly: false, 
+    expirationDate: '2030-12-31', 
+    active: true, 
+    usedBy: [] 
+  }
+];
+
+export const DEFAULT_CASHBACK_CONFIG: CashbackConfig = {
+  enabled: true,
+  percentage: 5
+};
+
 // Mock data for today and tomorrow to show functionality
 const today = new Date().toISOString().split('T')[0];
 const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
@@ -53,6 +98,7 @@ export const MOCK_APPOINTMENTS: Appointment[] = [
     serviceId: '1',
     serviceName: 'Lavagem Simples',
     price: 35,
+    originalPrice: 35,
     durationMinutes: 45,
     date: today,
     time: '09:00',
@@ -63,13 +109,16 @@ export const MOCK_APPOINTMENTS: Appointment[] = [
     vehicleColor: 'Prata',
     paymentMethod: 'Pix',
     notes: 'Cuidado com retrovisor esquerdo',
-    status: 'pending'
+    status: 'waiting',
+    dirtLevel: 'Normal',
+    extras: []
   },
   {
     id: '102',
     serviceId: '2',
     serviceName: 'Lavagem Completa',
-    price: 60,
+    price: 80, 
+    originalPrice: 80,
     durationMinutes: 90,
     date: today,
     time: '14:00',
@@ -79,13 +128,18 @@ export const MOCK_APPOINTMENTS: Appointment[] = [
     vehiclePlate: 'XYZ-9876',
     vehicleColor: 'Preto',
     paymentMethod: 'Crédito',
-    status: 'confirmed'
+    status: 'waiting',
+    dirtLevel: 'Muito Sujo',
+    extras: []
   },
   {
     id: '103',
     serviceId: '1',
     serviceName: 'Lavagem Simples',
-    price: 35,
+    price: 45, // 50 - 5 (Coupon)
+    originalPrice: 50,
+    couponCode: 'OFF5',
+    discountApplied: 5,
     durationMinutes: 45,
     date: tomorrow,
     time: '10:00',
@@ -95,6 +149,9 @@ export const MOCK_APPOINTMENTS: Appointment[] = [
     vehiclePlate: 'DEF-5678',
     vehicleColor: 'Branco',
     paymentMethod: 'Débito',
-    status: 'pending'
+    notes: 'Cliente quer retirar tapetes',
+    status: 'waiting',
+    dirtLevel: 'Normal',
+    extras: ['Cera Simples']
   }
 ];

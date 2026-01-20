@@ -2,8 +2,6 @@ import { GoogleGenAI } from "@google/genai";
 import { Appointment, Service } from '../types';
 
 const getAiClient = () => {
-  // Safe initialization, assumes API_KEY is available in the environment as per instructions
-  // In a real scenario, this would be process.env.API_KEY
   return new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
 };
 
@@ -14,30 +12,34 @@ export const generateDailyBriefing = async (
 ): Promise<string> => {
   const ai = getAiClient();
   
-  // Prepare context for the AI
-  const appointmentDetails = appointments.map(apt => {
-    const service = services.find(s => s.id === apt.serviceId);
-    return `- ${apt.time}: ${service?.name} (${apt.durationMinutes} min) - Veículo: ${apt.vehicleModel}`;
+  // Filter for active queue items
+  const activeQueue = appointments.filter(a => a.status === 'waiting' || a.status === 'in_progress');
+  const completed = appointments.filter(a => a.status === 'completed');
+
+  const queueDetails = activeQueue.map(apt => {
+    return `- ${apt.time} (Chegada): ${apt.vehicleModel} - ${apt.serviceName} [Status: ${apt.status}]`;
   }).join('\n');
 
   const prompt = `
-    Atue como um gerente experiente de Lava Rápido. Analise a agenda abaixo para o dia ${date}.
+    Atue como um gerente de Lava Rápido focado em fluxo contínuo (Ordem de Chegada).
     
-    Agendamentos:
-    ${appointmentDetails}
+    Data: ${date}
+    Carros na Fila/Lavando agora: ${activeQueue.length}
+    Carros Finalizados hoje: ${completed.length}
 
-    Gere um resumo curto, objetivo e em Português do Brasil.
-    Use estritamente este formato:
+    Detalhes da Fila Atual:
+    ${queueDetails}
 
-    📊 **Resumo da Carga:** [Uma frase sobre a intensidade do dia: Leve, Moderada ou Pesada]
+    Gere um resumo curto e objetivo em Português. Use estritamente este formato:
+
+    🚦 **Status da Pista:** [Resuma em 1 frase: Livre, Movimentada ou Lotada]
     
-    💡 **3 Sugestões Operacionais:**
-    1. [Sugestão prática 1 baseada nos horários/tipos de carro]
-    2. [Sugestão prática 2]
-    3. [Sugestão prática 3]
+    ⚡ **3 Sugestões para o Fluxo:**
+    1. [Sugestão prática para agilizar a fila atual]
+    2. [Sugestão de prioridade]
+    3. [Sugestão motivacional ou de vendas]
 
-    Se não houver agendamentos, diga apenas que o dia está livre e sugira ações de marketing.
-    Mantenha o tom profissional e motivador.
+    Se a fila estiver vazia, sugira uma ação rápida de marketing para atrair clientes agora.
   `;
 
   try {
@@ -45,9 +47,9 @@ export const generateDailyBriefing = async (
       model: 'gemini-2.5-flash',
       contents: prompt,
     });
-    return response.text || "Não foi possível gerar o resumo no momento.";
+    return response.text || "Não foi possível gerar o resumo.";
   } catch (error) {
     console.error("Gemini API Error:", error);
-    return "Assistente IA offline. Verifique sua conexão ou chave de API.";
+    return "Assistente IA offline.";
   }
 };
