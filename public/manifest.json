@@ -1,0 +1,47 @@
+{
+    "name": "Pit Stop Lava Car",
+    "short_name": "Pit Stop",
+    "description": "Sistema profissional de gestão e agendamento para Lava Car e Estética Automotiva",
+    "id": "/?source=pwa",
+    "start_url": "/?source=pwa",
+    "display": "standalone",
+    "display_override": [
+        "standalone",
+        "fullscreen"
+    ],
+    "orientation": "portrait",
+    "background_color": "#061F3A",
+    "theme_color": "#061F3A",
+    "categories": [
+        "business",
+        "productivity"
+    ],
+    "icons": [
+        {
+            "src": "https://firebasestorage.googleapis.com/v0/b/gen-lang-client-0420780722.firebasestorage.app/o/Logos%20de%20App%2FApp%20Lava%20Rapido%2FPit%20Stop%20-%20Lava%20Car.png?alt=media&token=5a4d5919-917f-432e-89a5-2e2678508b8b",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "https://firebasestorage.googleapis.com/v0/b/gen-lang-client-0420780722.firebasestorage.app/o/Logos%20de%20App%2FApp%20Lava%20Rapido%2FPit%20Stop%20-%20Lava%20Car.png?alt=media&token=5a4d5919-917f-432e-89a5-2e2678508b8b",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "https://firebasestorage.googleapis.com/v0/b/gen-lang-client-0420780722.firebasestorage.app/o/Logos%20de%20App%2FApp%20Lava%20Rapido%2FPit%20Stop%20-%20Lava%20Car.png?alt=media&token=5a4d5919-917f-432e-89a5-2e2678508b8b",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
+        }
+    ],
+    "screenshots": [
+        {
+            "src": "https://firebasestorage.googleapis.com/v0/b/gen-lang-client-0420780722.firebasestorage.app/o/Logos%20de%20App%2FApp%20Lava%20Rapido%2FPit%20Stop%20-%20Lava%20Car.png?alt=media&token=5a4d5919-917f-432e-89a5-2e2678508b8b",
+            "sizes": "512x512",
+            "type": "image/png",
+            "form_factor": "narrow"
+        }
+    ]
+}

@@ -1,0 +1,23 @@
+/* Base Styles */
+:root {
+  --navy: #061F3A;
+  --vivid-blue: #1E88E5;
+  --golden: #F4C430;
+  --slate-text: #5F6C7B;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* Custom animations if needed */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-out forwards;
+}
