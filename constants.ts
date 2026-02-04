@@ -3,7 +3,7 @@ import { Service, Appointment, ExtraService, Coupon, CashbackConfig, ShopSetting
 
 export const SHOP_PHONE = "5511978055321";
 export const LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/gen-lang-client-0420780722.firebasestorage.app/o/Logos%20de%20App%2FApp%20Lava%20Rapido%2FPit%20Stop%20-%20Lava%20Car.png?alt=media&token=5a4d5919-917f-432e-89a5-2e2678508b8b";
-export const APP_BASE_URL = "https://pit-stop-lava-car-583261147772.us-west1.run.app";
+export const APP_BASE_URL = "https://pit-stop-lavacar.web.app";
 
 // Defaults
 export const OPENING_HOUR = 8;
@@ -18,41 +18,41 @@ export const DEFAULT_SETTINGS: ShopSettings = {
 };
 
 export const INITIAL_SERVICES: Service[] = [
-  { 
-    id: 's1', 
-    name: 'Lavagem Simples', 
-    price: 25, 
-    durationMinutes: 40, 
-    description: 'Lavagem externa e aplicação de pretinho comum.', 
-    icon: 'droplets', 
-    active: true 
+  {
+    id: 's1',
+    name: 'Lavagem Simples',
+    price: 25,
+    durationMinutes: 40,
+    description: 'Lavagem externa e aplicação de pretinho comum.',
+    icon: 'droplets',
+    active: true
   },
-  { 
-    id: 's2', 
-    name: 'Lavar e Secar', 
-    price: 35, 
-    durationMinutes: 50, 
-    description: 'Externa, secagem, vãos de porta, pretinho e caixas de rodas.', 
-    icon: 'droplets', 
-    active: true 
+  {
+    id: 's2',
+    name: 'Lavar e Secar',
+    price: 35,
+    durationMinutes: 50,
+    description: 'Externa, secagem, vãos de porta, pretinho e caixas de rodas.',
+    icon: 'droplets',
+    active: true
   },
-  { 
-    id: 's3', 
-    name: 'Lavagem Completa', 
-    price: 70, 
-    durationMinutes: 90, 
-    description: 'Lavagem, secagem, aspiração, plásticos, vidros e pretinho.', 
-    icon: 'car', 
-    active: true 
+  {
+    id: 's3',
+    name: 'Lavagem Completa',
+    price: 70,
+    durationMinutes: 90,
+    description: 'Lavagem, secagem, aspiração, plásticos, vidros e pretinho.',
+    icon: 'car',
+    active: true
   },
-  { 
-    id: 's4', 
-    name: 'Lavagem de Moto', 
-    price: 35, 
-    durationMinutes: 45, 
-    description: 'Lavagem detalhada e completa para motos.', 
-    icon: 'sparkles', 
-    active: true 
+  {
+    id: 's4',
+    name: 'Lavagem de Moto',
+    price: 35,
+    durationMinutes: 45,
+    description: 'Lavagem detalhada e completa para motos.',
+    icon: 'sparkles',
+    active: true
   }
 ];
 
