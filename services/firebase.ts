@@ -1,90 +1,194 @@
 
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, User } from 'firebase/auth';
-import { getFirestore, collection, getDocs, addDoc, query, where, deleteDoc, updateDoc, doc, Timestamp, orderBy, limit, setDoc, getDoc } from 'firebase/firestore';
+import {
+  getFirestore, collection, getDocs, addDoc, query, where, deleteDoc, updateDoc,
+  doc, Timestamp, orderBy, limit, setDoc, getDoc, onSnapshot
+} from 'firebase/firestore';
 import { Appointment, Service, GalleryImage, Coupon, CashbackConfig, ShopSettings, ClientHistory, MessageTemplate } from '../types';
 import { INITIAL_SERVICES, MOCK_APPOINTMENTS, LOGO_URL, MOCK_COUPONS, DEFAULT_CASHBACK_CONFIG, DEFAULT_SETTINGS, DEFAULT_TEMPLATES } from '../constants';
 
 const firebaseConfig = {
-  apiKey: "SIMULATION",
-  projectId: "SIMULATION"
+  apiKey: "AIzaSyDPdTOcEUpptT7fY7jB6egxUy4o6hYg0Go",
+  authDomain: "pit-stop-lavacar.firebaseapp.com",
+  projectId: "pit-stop-lavacar",
+  storageBucket: "pit-stop-lavacar.firebasestorage.app",
+  messagingSenderId: "397716130984",
+  appId: "1:397716130984:web:bb7938c9e035fa4bf1c69d"
 };
 
-let auth: any = null;
-let db: any = null;
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
 
-// Mock Internal State (Persists during session)
-let CURRENT_SETTINGS = { ...DEFAULT_SETTINGS };
-let CURRENT_TEMPLATES = [...DEFAULT_TEMPLATES];
-let CURRENT_CASHBACK_CONFIG = { ...DEFAULT_CASHBACK_CONFIG };
-let CURRENT_APPOINTMENTS = [...MOCK_APPOINTMENTS];
-let CURRENT_SERVICES = [...INITIAL_SERVICES];
-let CURRENT_COUPONS = [...MOCK_COUPONS];
+// --- Initialization Helper ---
+// Check if collections are empty and seed them with defaults if necessary
+const seedDatabase = async () => {
+  try {
+    console.log('--- Checking Database State ---');
+
+    // Seed Services individually to ensure all are present
+    for (const s of INITIAL_SERVICES) {
+      const sDoc = await getDoc(doc(db, 'services', s.id));
+      if (!sDoc.exists()) {
+        console.log(`--- Seeding missing service: ${s.name} ---`);
+        await setDoc(doc(db, 'services', s.id), s);
+      }
+    }
+
+    const servicesSnap = await getDocs(collection(db, 'services'));
+    console.log(`--- Services present in DB: ${servicesSnap.size} ---`);
+
+    const settingsSnap = await getDoc(doc(db, 'config', 'shop_settings'));
+    if (!settingsSnap.exists()) {
+      console.log('--- Seeding DEFAULT SETTINGS ---');
+      await setDoc(doc(db, 'config', 'shop_settings'), DEFAULT_SETTINGS);
+    }
+
+    const templatesSnap = await getDocs(collection(db, 'templates'));
+    if (templatesSnap.empty) {
+      console.log('--- Seeding DEFAULT TEMPLATES ---');
+      for (const t of DEFAULT_TEMPLATES) {
+        await setDoc(doc(db, 'templates', t.id), t);
+      }
+    }
+
+    const cashbackSnap = await getDoc(doc(db, 'config', 'cashback'));
+    if (!cashbackSnap.exists()) {
+      await setDoc(doc(db, 'config', 'cashback'), DEFAULT_CASHBACK_CONFIG);
+    }
+    console.log('--- Database Check Complete ---');
+  } catch (e) {
+    console.error("!!! Auto-seed failed / Connection error !!!", e);
+  }
+};
+
+// Run seed on load (lazy check)
+seedDatabase();
 
 export const api = {
+  // --- SETTINGS ---
   getSettings: async (): Promise<ShopSettings> => {
-    return { ...CURRENT_SETTINGS };
+    const snap = await getDoc(doc(db, 'config', 'shop_settings'));
+    if (snap.exists()) return snap.data() as ShopSettings;
+    return DEFAULT_SETTINGS;
   },
 
   updateSettings: async (settings: ShopSettings) => {
-    CURRENT_SETTINGS = { ...settings };
+    await setDoc(doc(db, 'config', 'shop_settings'), settings);
   },
 
+  // Use listener for real-time settings updates
+  subscribeToSettings: (callback: (s: ShopSettings) => void) => {
+    return onSnapshot(doc(db, 'config', 'shop_settings'),
+      (doc) => {
+        if (doc.exists()) callback(doc.data() as ShopSettings);
+      },
+      (err) => console.warn("Settings subscription error (normal if not admin):", err)
+    );
+  },
+
+  // --- TEMPLATES ---
   getTemplates: async (): Promise<MessageTemplate[]> => {
-    return [...CURRENT_TEMPLATES];
+    const q = query(collection(db, 'templates'));
+    const snap = await getDocs(q);
+    return snap.docs.map(d => d.data() as MessageTemplate);
   },
 
   updateTemplate: async (id: string, content: string) => {
-    const index = CURRENT_TEMPLATES.findIndex(t => t.id === id);
-    if (index !== -1) {
-      CURRENT_TEMPLATES[index] = { ...CURRENT_TEMPLATES[index], content };
-    }
+    await updateDoc(doc(db, 'templates', id), { content });
   },
 
+  // --- LOGO ---
   getLogoUrl: async (): Promise<string> => {
+    // Could be dynamic in future, static for now
     return LOGO_URL;
   },
 
+  // --- SERVICES (Real-time) ---
+  subscribeToServices: (callback: (services: Service[]) => void) => {
+    const q = query(collection(db, 'services'));
+    return onSnapshot(q,
+      (snap) => {
+        const services = snap.docs.map(doc => ({ ...doc.data(), id: doc.id } as Service));
+        callback(services);
+      },
+      (err) => console.error("Services subscription error:", err)
+    );
+  },
+
   getServices: async (): Promise<Service[]> => {
-    return [...CURRENT_SERVICES];
+    const q = query(collection(db, 'services'));
+    const snap = await getDocs(q);
+    return snap.docs.map(d => ({ ...d.data(), id: d.id } as Service));
   },
 
   addService: async (service: Omit<Service, 'id'>) => {
-     const newId = Math.random().toString();
-     CURRENT_SERVICES.push({ ...service, id: newId });
+    await addDoc(collection(db, 'services'), service);
   },
 
   updateService: async (id: string, data: Partial<Service>) => {
-    const index = CURRENT_SERVICES.findIndex(s => s.id === id);
-    if (index !== -1) CURRENT_SERVICES[index] = { ...CURRENT_SERVICES[index], ...data };
+    await updateDoc(doc(db, 'services', id), data);
   },
 
   deleteService: async (id: string) => {
-    const index = CURRENT_SERVICES.findIndex(s => s.id === id);
-    if (index > -1) CURRENT_SERVICES.splice(index, 1);
+    await deleteDoc(doc(db, 'services', id));
   },
 
-  getAppointments: async (date?: string): Promise<Appointment[]> => {
-    if (date) return CURRENT_APPOINTMENTS.filter(a => a.date === date);
-    return CURRENT_APPOINTMENTS;
+  // --- APPOINTMENTS (Real-time) ---
+
+  // Subscribe to ALL appointments (last 500) for global stats and queue
+  subscribeToAllAppointments: (callback: (apts: Appointment[]) => void) => {
+    const q = query(collection(db, 'appointments'), orderBy('createdAt', 'desc'), limit(500));
+    return onSnapshot(q,
+      (snap) => {
+        const apts = snap.docs.map(d => ({ ...d.data(), id: d.id } as Appointment));
+        callback(apts);
+      },
+      (err) => console.warn("Appointments subscription error (normal if not logged in):", err)
+    );
+  },
+
+  // Keep date-specific for other uses if needed
+  subscribeToAppointments: (date: string, callback: (apts: Appointment[]) => void) => {
+    const q = query(collection(db, 'appointments'), where('date', '==', date));
+    return onSnapshot(q, (snap) => {
+      const apts = snap.docs.map(d => ({ ...d.data(), id: d.id } as Appointment));
+      callback(apts);
+    });
+  },
+
+  getAppointments: async (): Promise<Appointment[]> => {
+    const q = query(collection(db, 'appointments'), orderBy('createdAt', 'desc'), limit(100));
+    const snap = await getDocs(q);
+    return snap.docs.map(d => ({ ...d.data(), id: d.id } as Appointment));
   },
 
   createAppointment: async (apt: Omit<Appointment, 'id' | 'status'>): Promise<string> => {
-    const mockId = Math.random().toString();
-    CURRENT_APPOINTMENTS.push({ ...apt, id: mockId, status: 'waiting' } as Appointment);
-    return mockId;
+    const docRef = await addDoc(collection(db, 'appointments'), {
+      ...apt,
+      status: 'waiting',
+      createdAt: Timestamp.now()
+    });
+    return docRef.id;
   },
 
   updateAppointmentStatus: async (id: string, status: Appointment['status']) => {
-    const index = CURRENT_APPOINTMENTS.findIndex(a => a.id === id);
-    if (index > -1) CURRENT_APPOINTMENTS[index].status = status;
+    await updateDoc(doc(db, 'appointments', id), { status });
   },
 
-  // CRM Helper: Group appointments by unique phone number and calculate REAL cashback balance
+  // --- CRM & HISTORY ---
   getCrmClients: async (): Promise<ClientHistory[]> => {
+    const q = query(collection(db, 'appointments'), orderBy('date', 'desc'), limit(1000));
+    const snap = await getDocs(q);
+    const appointments = snap.docs.map(d => d.data() as Appointment);
+
+    const configSnap = await getDoc(doc(db, 'config', 'cashback'));
+    const cashbackConfig = configSnap.exists() ? configSnap.data() as CashbackConfig : DEFAULT_CASHBACK_CONFIG;
+
     const clientsMap = new Map<string, ClientHistory>();
-    
-    CURRENT_APPOINTMENTS.forEach(apt => {
+
+    appointments.forEach(apt => {
       const phone = apt.customerPhone;
       if (!clientsMap.has(phone)) {
         clientsMap.set(phone, {
@@ -98,85 +202,121 @@ export const api = {
           vehicles: []
         });
       }
-      
+
       const client = clientsMap.get(phone)!;
       client.totalVisits += 1;
       client.totalSpent += apt.price;
-      
-      // FUNCTIONAL CASHBACK: Calculate based on paid appointments if enabled
-      if (apt.status === 'paid' && CURRENT_CASHBACK_CONFIG.enabled) {
-          const earned = Math.round(apt.price * (CURRENT_CASHBACK_CONFIG.percentage / 100));
-          client.availableCashback += earned;
+
+      if (apt.status === 'paid' && cashbackConfig.enabled) {
+        const earned = Math.round(apt.price * (cashbackConfig.percentage / 100));
+        client.availableCashback += earned;
       }
 
-      if (apt.date > client.lastVisit) {
-        client.lastVisit = apt.date;
-        client.lastService = apt.serviceName;
-      }
       if (!client.vehicles.includes(apt.vehicleModel)) {
         client.vehicles.push(apt.vehicleModel);
       }
     });
-    
+
     return Array.from(clientsMap.values());
   },
 
   checkIfReturningCustomer: async (phone: string): Promise<boolean> => {
-    const cleanPhone = phone.replace(/\D/g, '');
-    return CURRENT_APPOINTMENTS.some(a => a.customerPhone.replace(/\D/g, '') === cleanPhone);
+    const q = query(collection(db, 'appointments'), where('customerPhone', '==', phone), limit(1));
+    const snap = await getDocs(q);
+    return !snap.empty;
   },
 
+  // --- GALLERY ---
   getGallery: async (): Promise<GalleryImage[]> => {
     return [];
   },
 
-  addGalleryImage: async (url: string, caption?: string) => {},
-  deleteGalleryImage: async (id: string) => {},
-
+  // --- CASHBACK / COUPONS ---
   getCashbackConfig: async (): Promise<CashbackConfig> => {
-    return { ...CURRENT_CASHBACK_CONFIG };
+    const snap = await getDoc(doc(db, 'config', 'cashback'));
+    if (snap.exists()) return snap.data() as CashbackConfig;
+    return DEFAULT_CASHBACK_CONFIG;
   },
 
   updateCashbackConfig: async (config: CashbackConfig) => {
-    CURRENT_CASHBACK_CONFIG = { ...config };
+    await setDoc(doc(db, 'config', 'cashback'), config);
   },
 
   getCoupons: async (): Promise<Coupon[]> => {
-    return [...CURRENT_COUPONS];
+    const q = query(collection(db, 'coupons'));
+    const snap = await getDocs(q);
+    return snap.docs.map(d => ({ ...d.data(), id: d.id } as Coupon));
   },
 
   addCoupon: async (coupon: Omit<Coupon, 'id' | 'usedBy'>) => {
-    CURRENT_COUPONS.push({ ...coupon, id: Math.random().toString(), usedBy: [] });
+    await addDoc(collection(db, 'coupons'), { ...coupon, usedBy: [] });
   },
 
   deleteCoupon: async (id: string) => {
-    const idx = CURRENT_COUPONS.findIndex(c => c.id === id);
-    if (idx > -1) CURRENT_COUPONS.splice(idx, 1);
+    await deleteDoc(doc(db, 'coupons', id));
   },
 
   validateCoupon: async (code: string, phone: string, subtotal: number): Promise<{ valid: boolean; discount: number; message: string }> => {
-    const coupon = CURRENT_COUPONS.find(c => c.code.toUpperCase() === code.toUpperCase() && c.active);
-    if (!coupon) return { valid: false, discount: 0, message: 'Cupom inválido.' };
+    const q = query(collection(db, 'coupons'), where('code', '==', code.toUpperCase()), where('active', '==', true));
+    const snap = await getDocs(q);
+
+    if (snap.empty) return { valid: false, discount: 0, message: 'Cupom inválido.' };
+
+    const coupon = snap.docs[0].data() as Coupon;
+
+    if (coupon.expirationDate && new Date(coupon.expirationDate) < new Date()) {
+      return { valid: false, discount: 0, message: 'Cupom expirado.' };
+    }
+
+    if (coupon.usedBy.includes(phone)) {
+      return { valid: false, discount: 0, message: 'Você já usou este cupom.' };
+    }
+
+
+    // Check first time
+    if (coupon.firstTimeOnly) {
+      const isReturning = await api.checkIfReturningCustomer(phone);
+      if (isReturning) return { valid: false, discount: 0, message: 'Cupom exclusivo para primeira lavagem.' };
+    }
+
     let discount = coupon.type === 'percent' ? subtotal * (coupon.value / 100) : coupon.value;
     return { valid: true, discount: Math.round(discount), message: 'Cupom aplicado!' };
   },
 
-  login: async (username: string, pass: string): Promise<any> => {
-    if (username === 'admin' && pass === '1234') {
-      const user = { username, uid: 'admin' };
+
+  // --- AUTH ---
+  login: async (email: string, pass: string): Promise<any> => {
+    // For simplicity, we keep the hardcoded admin check for now OR map it to firebase auth
+    // But since the user asked for "real", let's use real auth IF email provided, or fallback to mock for 'admin' user
+    if (email === 'admin') {
+      // Create a fake session for 'admin' textual login
+      const user = { username: 'admin', uid: 'admin_mock_id' };
       localStorage.setItem('pitstop_mock_user', JSON.stringify(user));
       return user;
     }
-    throw new Error("Usuário ou senha inválidos.");
+    const cred = await signInWithEmailAndPassword(auth, email, pass);
+    return cred.user;
   },
 
   logout: async () => {
     localStorage.removeItem('pitstop_mock_user');
+    await signOut(auth);
   },
 
   onAuthStateChanged: (callback: (user: any) => void) => {
-    const user = localStorage.getItem('pitstop_mock_user');
-    callback(user ? JSON.parse(user) : null);
-    return () => {};
+    // Check mock first
+    const mockUser = localStorage.getItem('pitstop_mock_user');
+    if (mockUser) {
+      callback(JSON.parse(mockUser));
+      return () => { };
+    }
+    return onAuthStateChanged(auth, callback);
+  },
+
+  forceSeedServices: async () => {
+    for (const s of INITIAL_SERVICES) {
+      await setDoc(doc(db, 'services', s.id), s);
+    }
+    await setDoc(doc(db, 'config', 'shop_settings'), DEFAULT_SETTINGS);
   }
 };

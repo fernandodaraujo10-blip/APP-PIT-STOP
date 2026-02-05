@@ -22,3 +22,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+*.cjs
+check_firebase.*
+seed_manual.ts
+.firebase
+dist
+

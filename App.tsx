@@ -154,8 +154,23 @@ const MainApp: React.FC = () => {
   const { showToast } = useToast();
 
   useEffect(() => {
-    api.onAuthStateChanged(user => { if (user) setView(ViewState.ADMIN_DASHBOARD); setIsAuthChecking(false); });
-    api.getLogoUrl().then(setLogoUrl);
+    // Initial data fetch
+    const init = async () => {
+      try {
+        const logo = await api.getLogoUrl().catch(() => '');
+        setLogoUrl(logo);
+      } finally {
+        // Only set auth check to false after a timeout if Firebase is slow
+        const timer = setTimeout(() => setIsAuthChecking(false), 5000);
+
+        api.onAuthStateChanged(user => {
+          if (user) setView(ViewState.ADMIN_DASHBOARD);
+          setIsAuthChecking(false);
+          clearTimeout(timer);
+        });
+      }
+    };
+    init();
   }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -173,7 +188,53 @@ const MainApp: React.FC = () => {
     }
   };
 
-  if (isAuthChecking) return <div className="h-screen flex items-center justify-center bg-navy text-white"><div className="w-10 h-10 border-4 border-golden border-t-transparent rounded-full animate-spin"></div></div>;
+  if (isAuthChecking) {
+    return (
+      <div className="h-screen bg-navy flex flex-col items-center justify-center p-6 text-center overflow-hidden relative">
+        <div className="absolute top-0 left-0 w-full h-full opacity-10">
+          <div className="absolute top-[-20%] left-[-20%] w-[140%] h-[140%] bg-[radial-gradient(circle,white_0%,transparent_60%)] animate-pulse"></div>
+        </div>
+
+        <div className="relative z-10 space-y-8 animate-fade-in">
+          <div className="relative group">
+            <div className="absolute -inset-4 bg-gradient-to-r from-vivid-blue to-golden rounded-[3.5rem] blur-2xl opacity-20 animate-pulse"></div>
+            <div className="relative w-40 h-40 bg-white rounded-[3.5rem] shadow-2xl flex items-center justify-center overflow-hidden border-4 border-white/20">
+              {logoUrl ? (
+                <img src={logoUrl} className="w-full h-full object-contain scale-[1.2]" alt="Logo" />
+              ) : (
+                <div className="w-full h-full bg-slate-50 flex items-center justify-center">
+                  <Sparkles className="text-vivid-blue w-12 h-12" />
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <div className="flex flex-col items-center">
+              <h1 className="text-3xl font-black text-white italic tracking-tighter leading-none mb-1">PIT STOP</h1>
+              <div className="bg-golden px-4 py-0.5 rounded-full">
+                <span className="text-navy font-black text-[8px] tracking-[0.2em] uppercase">CAR WASH</span>
+              </div>
+            </div>
+
+            <div className="pt-8 flex flex-col items-center gap-3">
+              <div className="w-12 h-1.5 bg-white/10 rounded-full overflow-hidden relative">
+                <div className="absolute top-0 left-0 h-full bg-vivid-blue w-1/2 animate-[loading_1.5s_ease-in-out_infinite]"></div>
+              </div>
+              <p className="text-[9px] font-black text-white/30 uppercase tracking-[0.3em] animate-pulse">Iniciando sistema...</p>
+            </div>
+          </div>
+        </div>
+
+        <style>{`
+          @keyframes loading {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(200%); }
+          }
+        `}</style>
+      </div>
+    );
+  }
 
   if (view === ViewState.HOME) return (
     <LandingPage

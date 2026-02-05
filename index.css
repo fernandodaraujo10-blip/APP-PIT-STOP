@@ -21,3 +21,9 @@ body {
 .animate-fade-in {
   animation: fadeIn 0.5s ease-out forwards;
 }
+
+.native-scroll {
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch;
+}
+

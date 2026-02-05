@@ -1,26 +1,26 @@
-// Minimal Service Worker for PWA compliance
-const CACHE_NAME = 'pit-stop-v1';
-const ASSETS = [
-  '/',
-  '/index.html',
-  '/index.css',
-  '/index.tsx',
-];
+const CACHE_NAME = 'pit-stop-v2';
 
+// Network-First Strategy: Try network, fallback to cache
 self.addEventListener('install', (event) => {
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      // We don't necessarily need to cache everything for it to be installable
-      // but a fetch listener is required.
-      return cache.addAll(ASSETS);
+    caches.keys().then((cacheNames) => {
+      return Promise.all(
+        cacheNames.filter((name) => name !== CACHE_NAME)
+          .map((name) => caches.delete(name))
+      );
     })
   );
 });
 
 self.addEventListener('fetch', (event) => {
   event.respondWith(
-    caches.match(event.request).then((response) => {
-      return response || fetch(event.request);
+    fetch(event.request).catch(() => {
+      return caches.match(event.request);
     })
   );
 });
+
