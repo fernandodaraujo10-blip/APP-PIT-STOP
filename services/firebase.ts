@@ -139,7 +139,8 @@ export const api = {
 
   // Subscribe to ALL appointments (last 500) for global stats and queue
   subscribeToAllAppointments: (callback: (apts: Appointment[]) => void) => {
-    const q = query(collection(db, 'appointments'), orderBy('createdAt', 'desc'), limit(500));
+    // Ordenar por data e hora garante que compromissos sem createdAt também apareçam
+    const q = query(collection(db, 'appointments'), orderBy('date', 'desc'), orderBy('time', 'desc'), limit(500));
     return onSnapshot(q,
       (snap) => {
         const apts = snap.docs.map(d => ({ ...d.data(), id: d.id } as Appointment));
@@ -189,31 +190,32 @@ export const api = {
     const clientsMap = new Map<string, ClientHistory>();
 
     appointments.forEach(apt => {
-      const phone = apt.customerPhone;
+      const phone = apt.customerPhone || 'Não informado';
       if (!clientsMap.has(phone)) {
         clientsMap.set(phone, {
           phone,
-          name: apt.customerName,
+          name: apt.customerName || 'Cliente sem nome',
           totalVisits: 0,
           totalSpent: 0,
           availableCashback: 0,
-          lastVisit: apt.date,
-          lastService: apt.serviceName,
+          lastVisit: apt.date || '',
+          lastService: apt.serviceName || 'Lavação',
           vehicles: []
         });
       }
 
       const client = clientsMap.get(phone)!;
       client.totalVisits += 1;
-      client.totalSpent += apt.price;
+      client.totalSpent += (Number(apt.price) || 0);
 
-      if (apt.status === 'paid' && cashbackConfig.enabled) {
-        const earned = Math.round(apt.price * (cashbackConfig.percentage / 100));
-        client.availableCashback += earned;
+      const vehicle = apt.vehicleModel || 'Veículo';
+      if (!client.vehicles.includes(vehicle)) {
+        client.vehicles.push(vehicle);
       }
 
-      if (!client.vehicles.includes(apt.vehicleModel)) {
-        client.vehicles.push(apt.vehicleModel);
+      if (apt.status === 'paid' && cashbackConfig.enabled) {
+        const reward = (Number(apt.price) || 0) * (Number(cashbackConfig.percentage) / 100);
+        client.availableCashback += Math.round(reward);
       }
     });
 

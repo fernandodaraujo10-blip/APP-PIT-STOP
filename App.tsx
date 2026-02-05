@@ -1,6 +1,6 @@
 
-import React, { useState, useEffect, Suspense, lazy } from 'react';
-import { ShieldCheck, Settings as SettingsIcon, ListOrdered, TrendingUp, Home as HomeIcon, Users, PlusCircle, LogOut, X, MessageCircle, Calendar, Sparkles, Clock } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ShieldCheck, Settings as SettingsIcon, ListOrdered, TrendingUp, Home as HomeIcon, Users, PlusCircle, LogOut, X, MessageCircle, Calendar, Sparkles, Clock, Activity } from 'lucide-react';
 import { ViewState } from './types';
 import { api } from './services/firebase';
 import { AppProvider, useApp } from './AppContext';
@@ -9,16 +9,14 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { ToastProvider, useToast } from './components/Toast';
 import { InstallPWA } from './components/InstallPWA';
 
-// Static imports for critical client path to ensure reliability
+// Static imports for core components to prevent dynamic import fetch errors (missing chunks after redeploy)
 import { BookingFlow } from './BookingFlow';
 import { GalleryView } from './GalleryView';
-
-// Lazy loading admin sub-components
-const HomeScreen = lazy(() => import('./HomeScreen').then(m => ({ default: m.HomeScreen })));
-const DashboardFinanceiro = lazy(() => import('./DashboardFinanceiro').then(m => ({ default: m.DashboardFinanceiro })));
-const FilaLavagem = lazy(() => import('./FilaLavagem').then(m => ({ default: m.FilaLavagem })));
-const CRMClientes = lazy(() => import('./CRMClientes').then(m => ({ default: m.CRMClientes })));
-const MaisEstatisticas = lazy(() => import('./MaisEstatisticas').then(m => ({ default: m.MaisEstatisticas })));
+import { HomeScreen } from './HomeScreen';
+import { DashboardFinanceiro } from './DashboardFinanceiro';
+import { FilaLavagem } from './FilaLavagem';
+import { CRMClientes } from './CRMClientes';
+import { MaisEstatisticas } from './MaisEstatisticas';
 
 const LoadingSpinner = () => (
   <div className="flex-1 flex items-center justify-center p-12">
@@ -89,23 +87,32 @@ const LandingPage: React.FC<{
 const AdminDashboard: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
   const [activeTab, setActiveTab] = useState<'queue' | 'finance' | 'home' | 'crm' | 'promotions'>('home');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const { settings, templates, updateShopSettings, updateMsgTemplate } = useApp();
+  const { settings, templates, updateShopSettings, updateMsgTemplate, isLoading, refreshData } = useApp();
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
       <header className="bg-navy text-white p-4 flex justify-between items-center shadow-lg sticky top-0 z-50">
-        <div className="flex items-center gap-2 font-bold italic"><ShieldCheck className="text-golden" /> PIT STOP <span className="text-vivid-blue">PRO</span></div>
-        <button onClick={() => setIsSettingsOpen(true)} className="p-2 bg-white/5 rounded-full hover:bg-white/10 transition-colors"><SettingsIcon size={20} /></button>
+        <div className="flex flex-col">
+          <div className="flex items-center gap-2 font-bold italic"><ShieldCheck className="text-golden" /> PIT STOP <span className="text-vivid-blue">PRO</span></div>
+          <div className="flex items-center gap-1.5 px-0.5">
+            <div className={`w-1.5 h-1.5 rounded-full ${isLoading ? 'bg-golden animate-pulse' : 'bg-green-500'}`}></div>
+            <span className="text-[7px] font-black uppercase tracking-widest text-white/40">{isLoading ? 'Sincronizando...' : 'Conectado'}</span>
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <button onClick={() => refreshData()} className="p-2 bg-white/5 rounded-full hover:bg-white/10 transition-colors">
+            <Activity size={20} className={isLoading ? 'animate-spin text-golden' : 'text-green-500'} />
+          </button>
+          <button onClick={() => setIsSettingsOpen(true)} className="p-2 bg-white/5 rounded-full hover:bg-white/10 transition-colors"><SettingsIcon size={20} /></button>
+        </div>
       </header>
 
       <main className="flex-1 p-4 max-w-5xl mx-auto w-full space-y-6 pb-28 overflow-y-auto">
-        <Suspense fallback={<LoadingSpinner />}>
-          {activeTab === 'home' && <HomeScreen onTabChange={setActiveTab} />}
-          {activeTab === 'queue' && <FilaLavagem />}
-          {activeTab === 'finance' && <DashboardFinanceiro />}
-          {activeTab === 'crm' && <CRMClientes />}
-          {activeTab === 'promotions' && <MaisEstatisticas />}
-        </Suspense>
+        {activeTab === 'home' && <HomeScreen onTabChange={setActiveTab} />}
+        {activeTab === 'queue' && <FilaLavagem />}
+        {activeTab === 'finance' && <DashboardFinanceiro />}
+        {activeTab === 'crm' && <CRMClientes />}
+        {activeTab === 'promotions' && <MaisEstatisticas />}
 
         {isSettingsOpen && (
           <div className="fixed inset-0 z-[60] bg-white p-6 overflow-y-auto animate-in fade-in slide-in-from-bottom duration-300">
